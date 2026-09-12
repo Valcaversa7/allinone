@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Optional GitHub release tag to attach the APK to'
+        description: Optional GitHub release tag to attach the APK to
         required: false
         type: string
   push:
@@ -26,11 +26,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -45,12 +45,15 @@ jobs:
         run: npx expo prebuild --platform android --non-interactive --no-install
 
       - name: Build debug APK
+        id: gradle_build
         run: |
+          set -o pipefail
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew app:assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log
 
       - name: Prepare APK filename
+        if: success()
         id: apk
         run: |
           APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
@@ -59,14 +62,23 @@ jobs:
           echo "apk_path=$APK_NAME" >> "$GITHUB_OUTPUT"
           echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-log
+          path: gradle-build.log
+          if-no-files-found: warn
+
       - name: Upload workflow artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: ${{ steps.apk.outputs.apk_path }}
 
       - name: Attach APK to GitHub release
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' }}
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.inputs.release_tag }}
