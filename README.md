@@ -77,9 +77,30 @@ or
 npx expo run:ios
 ```
 
+## APK build setup
+
+This repo includes:
+
+- `eas.json` for optional Expo/EAS cloud builds
+- `.github/workflows/android-apk.yml` for GitHub Actions APK builds without requiring an Expo account
+
+The GitHub Actions workflow:
+
+- runs `expo prebuild` for Android
+- builds an installable debug APK with Gradle
+- uploads the APK as a workflow artifact
+- can also attach the APK to a GitHub release tag when manually triggered
+
+To trigger from GitHub:
+
+1. Open **Actions**
+2. Choose **Build Android APK**
+3. Click **Run workflow**
+4. Optionally enter a release tag such as `v0.1.0-mobile-mvp`
+
 ## EAS build profiles
 
-This repo includes `eas.json` with:
+This repo also includes `eas.json` with:
 
 - `development` for a dev client
 - `preview` for an installable Android APK
