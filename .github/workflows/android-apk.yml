@@ -52,6 +52,26 @@ jobs:
           chmod +x gradlew
           ./gradlew app:assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log
 
+      - name: Summarize Gradle failure
+        if: failure()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          log_path = Path('gradle-build.log')
+          text = log_path.read_text(errors='ignore') if log_path.exists() else 'No gradle-build.log found.'
+          markers = ['* What went wrong:', 'Caused by:', 'FAILURE: Build failed with an exception.']
+          start = 0
+          for marker in markers:
+            idx = text.rfind(marker)
+            if idx != -1:
+              start = idx
+              break
+          snippet = text[start:]
+          lines = snippet.strip().splitlines()[-80:]
+          message = ' | '.join(line.strip().replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A') for line in lines)
+          print(f'::error::{message[:6000]}')
+          PY
+
       - name: Prepare APK filename
         if: success()
         id: apk
