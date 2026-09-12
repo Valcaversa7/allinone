@@ -57,19 +57,38 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           log_path = Path('gradle-build.log')
           text = log_path.read_text(errors='ignore') if log_path.exists() else 'No gradle-build.log found.'
-          markers = ['* What went wrong:', 'Caused by:', 'FAILURE: Build failed with an exception.']
-          start = 0
-          for marker in markers:
-            idx = text.rfind(marker)
-            if idx != -1:
-              start = idx
-              break
-          snippet = text[start:]
-          lines = snippet.strip().splitlines()[-80:]
-          message = ' | '.join(line.strip().replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A') for line in lines)
-          print(f'::error::{message[:6000]}')
+          lines = text.splitlines()
+
+          start = None
+          priority_markers = [
+              '* What went wrong:',
+              'Execution failed for task',
+              'A problem occurred',
+              'e: ',
+              'FAILURE: Build failed with an exception.'
+          ]
+
+          for marker in priority_markers:
+              for i, line in enumerate(lines):
+                  if marker in line:
+                      start = i
+                      break
+              if start is not None:
+                  break
+
+          if start is None:
+              start = max(0, len(lines) - 80)
+
+          snippet_lines = lines[start:start + 120]
+          snippet = ' | '.join(
+              re.sub(r'\s+', ' ', line).strip().replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              for line in snippet_lines if line.strip()
+          )
+          print(f'::error::{snippet[:6000]}')
           PY
 
       - name: Prepare APK filename
