@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: '1'
+      DEFAULT_RELEASE_TAG: v0.1.0-mobile-mvp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,13 +118,19 @@ jobs:
           path: ${{ steps.apk.outputs.apk_path }}
 
       - name: Attach APK to GitHub release
-        if: ${{ success() && github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' }}
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          INPUT_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          DEFAULT_RELEASE_TAG: ${{ env.DEFAULT_RELEASE_TAG }}
           APK_PATH: ${{ steps.apk.outputs.apk_path }}
           APK_NAME: ${{ steps.apk.outputs.apk_name }}
         run: |
+          RELEASE_TAG="$INPUT_RELEASE_TAG"
+          if [ -z "$RELEASE_TAG" ]; then
+            RELEASE_TAG="$DEFAULT_RELEASE_TAG"
+          fi
+
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$APK_PATH#$APK_NAME" --clobber
           else
