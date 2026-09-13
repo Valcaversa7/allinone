@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "College Timetable",
+    "slug": "college-timetable",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-ocr-kit",
+        {
+          "cameraPermission": "Allow College Timetable to capture timetable photos for on-device class extraction."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow College Timetable to import timetable images from your library.",
+          "cameraPermission": "Allow College Timetable to take timetable photos for class extraction."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.valcaversa7.allinone",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow College Timetable to import timetable images from your library."
+      }
+    },
+    "android": {
+      "package": "com.valcaversa7.allinone",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
