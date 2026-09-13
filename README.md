@@ -156,3 +156,17 @@ python3 scripts/check-apk.py android/app/build/outputs/apk/release/app-release.a
 
 Use `armeabi-v7a` for a 32-bit phone. Never use `assembleDebug` for a standalone
 download: it normally expects a running Metro development server.
+
+### Verified build size (v1.0.1-small-8)
+
+[Download the optimized testing APKs](https://github.com/Valcaversa7/allinone/releases/tag/v1.0.1-small-8).
+[Successful build and automated checks](https://github.com/Valcaversa7/allinone/actions/runs/34774548217).
+
+| APK | Download bytes | Decimal MB | Reduction from original |
+| --- | ---: | ---: | ---: |
+| Original debug APK | 184,748,470 | 184.75 | — |
+| ARM64 release variant | 17,429,700 | 17.43 | 90.6% |
+| ARM32 release variant | 15,865,040 | 15.87 | 91.4% |
+
+These are actual published asset sizes, not estimates. The signing and physical-device
+testing caveats above still apply.
