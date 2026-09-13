@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { recognizeText } from 'expo-ocr-kit';
 import { Platform } from 'react-native';
 

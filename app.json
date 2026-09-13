@@ -2,7 +2,7 @@
   "expo": {
     "name": "College Timetable",
     "slug": "college-timetable",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
@@ -21,7 +21,22 @@
           "photosPermission": "Allow College Timetable to import timetable images from your library.",
           "cameraPermission": "Allow College Timetable to take timetable photos for class extraction."
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": true,
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ]
+          }
+        }
+      ],
+      "./plugins/with-small-android"
     ],
     "ios": {
       "supportsTablet": true,
@@ -35,10 +50,12 @@
       "permissions": [
         "CAMERA",
         "READ_MEDIA_IMAGES"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "jsEngine": "hermes"
   }
 }

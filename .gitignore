@@ -2,3 +2,13 @@ node_modules/
 .expo/
 .web-build/
 dist/
+
+# Generated native projects, builds, and local artifacts
+android/
+ios/
+.artifacts/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.log
