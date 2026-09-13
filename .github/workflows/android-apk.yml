@@ -1,0 +1,107 @@
+name: Build small Android APKs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/01a09bea-allinone]
+    paths-ignore: ['**/*.md']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - name: Generate native project
+        run: npx expo prebuild --platform android --no-install
+      - name: Build standalone, shrunk release APK
+        run: |
+          set -o pipefail
+          cd android
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=${{ matrix.abi }} --max-workers=2 --stacktrace 2>&1 | tee ../gradle-build.log
+      - name: Verify and measure APK
+        run: |
+          mkdir -p .artifacts
+          APK=".artifacts/college-timetable-${{ matrix.abi }}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+          python3 scripts/check-apk.py "$APK" --abi '${{ matrix.abi }}' | tee ".artifacts/size-${{ matrix.abi }}.json"
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify "$APK"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" > ".artifacts/manifest-${{ matrix.abi }}.txt"
+          if grep -q 'application-debuggable' ".artifacts/manifest-${{ matrix.abi }}.txt"; then
+            echo 'Refusing to publish a debuggable APK'; exit 1
+          fi
+          cat ".artifacts/size-${{ matrix.abi }}.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timetable-${{ matrix.abi }}
+          path: .artifacts/
+          include-hidden-files: true
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log-${{ matrix.abi }}
+          path: gradle-build.log
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: timetable-*
+          path: .artifacts
+          merge-multiple: true
+      - name: Publish measured APKs as a testing prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > .artifacts/release-notes.md <<'NOTES'
+          Smaller, standalone release-variant APKs. No Expo Go or Metro server required.
+
+          - Most Android phones: download **arm64-v8a**.
+          - Older 32-bit ARM phones: download **armeabi-v7a**.
+          - Android 7.0 or newer is required by the current React Native stack; x86 phones are not supported by these APKs.
+          - Offline OCR, camera/gallery/document import, editing, and local storage are retained. PDF extraction remains incomplete.
+          - Code and resources are shrunk; native libraries and the embedded JS bundle are compressed.
+
+          **Testing prerelease:** uses Expo's public test signing key, not a private production key. Do not distribute through Play as a production release. No physical-device testing has been performed. If updating reports a signature conflict, preserve your timetable before uninstalling the old build (uninstalling erases local data).
+
+          Measured sizes (the original APK was 184.75 MB):
+          NOTES
+          python3 - <<'PY' >> .artifacts/release-notes.md
+          import glob, json
+          for path in sorted(glob.glob('.artifacts/size-*.json')):
+              report = json.load(open(path))
+              print(f"- {report['abi']}: **{report['MB']} MB**, {report['reduction_vs_original_percent']}% smaller")
+          PY
+          gh release create "v1.0.1-small-${GITHUB_RUN_NUMBER}" .artifacts/*.apk .artifacts/size-*.json \
+            --target "$GITHUB_SHA" --prerelease --title 'College Timetable — smaller standalone APKs' \
+            --notes-file .artifacts/release-notes.md
